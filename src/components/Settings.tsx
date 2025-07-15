@@ -2,25 +2,35 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { User, Mail, BookOpen, Save, Upload } from 'lucide-react';
+import { User, Mail, Save } from 'lucide-react';
+
+// Strict subject type - no empty string
+type Subject = 'biology' | 'physics' | 'chemistry' | undefined;
 
 const Settings: React.FC = () => {
   const { user, updateUser } = useAuth();
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState<{
+    username: string;
+    email: string;
+    subject: Subject;
+  }>({
     username: user?.username || '',
     email: user?.email || '',
-    subject: user?.subject || '',
+    subject: (user?.subject as Subject) ?? undefined,
   });
+
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
+      // Pass formData directly; subject is now properly typed
       await updateUser(formData);
       toast.success('Settings updated successfully!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to update settings');
     } finally {
       setLoading(false);
@@ -34,7 +44,7 @@ const Settings: React.FC = () => {
   ];
 
   const avatars = [
-    '👨‍🎓', '👩‍🎓', '🧑‍💻', '👨‍🔬', '👩‍🔬', '🧑‍🏫', '👨‍🏫', '👩‍🏫'
+    '👨‍🎓', '👩‍🎓', '🧑‍💻', '👨‍🔬', '👩‍🔬', '🧑‍🏫', '👨‍🏫', '👩‍🏫',
   ];
 
   return (
@@ -98,13 +108,16 @@ const Settings: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
               <div className="grid grid-cols-1 gap-2">
                 {subjects.map((subject) => (
-                  <label key={subject.id} className="flex items-center space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                  <label
+                    key={subject.id}
+                    className="flex items-center space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                  >
                     <input
                       type="radio"
                       name="subject"
                       value={subject.id}
                       checked={formData.subject === subject.id}
-                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value as Subject })}
                       className="text-blue-600"
                     />
                     <span className="text-xl">{subject.icon}</span>

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, TrendingUp, Users, Library } from 'lucide-react';
 
 const Hero: React.FC = () => {
   return (

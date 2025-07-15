@@ -73,12 +73,16 @@ const SignUp: React.FC = () => {
       console.log('Signup completed successfully');
       toast.success('Account created successfully!');
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Signup error:', error);
-      if (error.message?.includes('Invalid API key') || error.message?.includes('supabaseUrl')) {
-        toast.error('Please connect to Supabase first using the button in the top right corner');
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid API key') || error.message.includes('supabaseUrl')) {
+          toast.error('Please connect to Supabase first using the button in the top right corner');
+        } else {
+          toast.error(`Error creating account: ${error.message}`);
+        }
       } else {
-        toast.error(`Error creating account: ${error.message || 'Please try again.'}`);
+        toast.error('Error creating account: Please try again.');
       }
     } finally {
       setLoading(false);

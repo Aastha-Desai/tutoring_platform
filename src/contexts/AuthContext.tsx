@@ -26,35 +26,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        setUser(profile);
+    let isMounted = true;
+
+    const getSessionAndUser = async () => {
+      try {
+        setLoading(true);
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('Error getting session:', sessionError);
+          if (isMounted) {
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (session?.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profileError) {
+            console.error('Error fetching user profile:', profileError);
+            if (isMounted) {
+              setUser(null);
+            }
+          } else if (isMounted) {
+            setUser(profile);
+          }
+        } else if (isMounted) {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Unexpected error fetching session or user:', error);
+        if (isMounted) {
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
-    getSession();
+    getSessionAndUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        setUser(profile);
-      } else if (event === 'SIGNED_OUT') {
+      if (!isMounted) return;
+
+      try {
+        setLoading(true);
+        if (event === 'SIGNED_IN' && session?.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profileError) {
+            console.error('Error fetching user profile after sign-in:', profileError);
+            setUser(null);
+          } else {
+            setUser(profile);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error handling auth state change:', error);
         setUser(null);
+      } finally {
+        setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -65,11 +120,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string, username: string, subject: string, plan: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    username: string,
+    subject: string,
+    plan: string
+  ) => {
     console.log('Starting signup process...');
     console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
     console.log('Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-    
+
     if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
       throw new Error('Supabase configuration missing. Please connect to Supabase first.');
     }
@@ -78,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       password,
     });
-    
+
     if (error) {
       console.error('Auth signup error:', error);
       throw error;
@@ -97,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           progress: 0,
         },
       ]);
-      
+
       if (profileError) {
         console.error('Profile creation error:', profileError);
         throw profileError;

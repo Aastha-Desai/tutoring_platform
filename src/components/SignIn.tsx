@@ -20,7 +20,7 @@ const SignIn: React.FC = () => {
       await signIn(email, password);
       toast.success('Welcome back!');
       navigate('/dashboard');
-    } catch (error) {
+    } catch {
       toast.error('Invalid email or password');
     } finally {
       setLoading(false);
